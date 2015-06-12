@@ -1,0 +1,79 @@
+--Creating a View
+
+CREATE VIEW AvgSessionLengthByMonth as
+select dt.month month, avg(ses.sessionend-ses.sessionstart) avgsessionLength
+from dw_branch_temp_fact fact, dw_time_dim dt,dw_session_dim ses
+where dt.date_id =dt.date_id
+and fact.sessionid=ses.sessionid
+group by dt.month;
+
+--Sessions by month by cover
+
+select count(fact.sessionid),dt.month, ses.coverdescription
+from dw_branch_temp_fact fact, dw_time_dim dt, dw_session_dim ses
+where
+fact.sessionid =ses.sessionid
+AND fact.date_id =dt.date_id
+Group by ses.coverdescription ,dt.month
+
+--TempRequest by type of branch Cover By Week
+select  ses.coverdescription , dt.week , count(fact.temprequestid)
+from dw_branch_temp_fact fact,
+dw_session_dim ses,dw_temprequest_dim temp ,dw_time_dim dt
+where
+fact.temprequestid =temp.temprequestid
+AND
+fact.sessionid =ses.sessionid
+AND fact.date_id =dt.date_id
+Group by dt.week,ses.coverdescription ;
+
+--TEMP REQUEST BY CONTY BY MONTH
+select  dim.county, dt.month, count(fact.temprequestid)
+from dw_branch_temp_fact fact,
+dw_bankbranch_dim dim,dw_temprequest_dim temp ,dw_time_dim dt
+where
+fact.temprequestid =temp.temprequestid
+AND
+fact.branchid =dim.branchid
+AND fact.date_id =dt.date_id
+Group by dt.month,dim.county ;
+
+--TEMP REQUEST BY town BY week
+select  dim.town, dt.week, count(fact.temprequestid)
+from dw_branch_temp_fact fact,
+dw_bankbranch_dim dim,dw_temprequest_dim temp ,dw_time_dim dt
+where
+fact.temprequestid =temp.temprequestid
+AND
+fact.branchid =dim.branchid
+AND fact.date_id =dt.date_id
+Group by dt.week,dim.town ;
+
+---Cancelled
+select  dt.month, count(fact.temprequestid)
+from dw_branch_temp_fact fact,
+dw_session_dim ses,dw_temprequest_dim temp ,dw_time_dim dt
+where
+fact.temprequestid =temp.temprequestid
+AND
+fact.sessionid =ses.sessionid
+AND fact.date_id =dt.date_id
+AND ses.status like '%cancelled%'
+Group by dt.month ;
+
+
+--dumping data to text file
+SET HEADING OFF;
+SET FEEDBACK OFF;
+SET LINESIZE 1000;
+SPOOL \\storage-stud\user-area\1\ms118\Desktop\DataWarehousing\TEMPREQUEST.txt;
+SELECT * FROM temprequest;
+SPOOL OFF;
+
+---loading data from a text file
+
+load data
+infile 'TEMPREQUESTd.txt'  "fix 11"
+into table SELECT * FROM temprequest;
+fields terminated by ',' optionally enclosed by '"'
+

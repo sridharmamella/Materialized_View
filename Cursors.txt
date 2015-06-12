@@ -1,0 +1,143 @@
+--CURSOR FOR SESSION TABLE--
+
+DECLARE
+CURSOR sessionCursor IS
+SELECT SESSIONID ,
+REQUESTID ,
+TEMPID ,
+SESSIONDATE ,
+SESSIONSTART ,
+SESSIONEND ,
+STATUS ,
+TYPE ,
+COVERDESCRIPTION,
+EMPLOYEECOVERED ,
+DOPRINT  FROM SESSION_ s, TEMPTYPEOFCOVER tc
+WHERE s.TYPE=tc.TYPEOFCOVERID;
+BEGIN
+   FOR  s_rec in sessionCursor
+   LOOP
+   if (s_rec.SESSIONSTART is not null and s_rec.SESSIONEND is not null) then 
+   insert into DW_SESSION_DIM  values (s_rec.SESSIONID, s_rec.REQUESTID,s_rec.TEMPID, s_rec.SESSIONDATE, s_rec.SESSIONSTART,s_rec.SESSIONEND,s_rec.STATUS,
+   s_rec.TYPE,s_rec.COVERDESCRIPTION,s_rec.EMPLOYEECOVERED,s_rec.DOPRINT);
+   end if ;
+   END LOOP;
+END;
+
+
+--CURSOR FOR TempRequest TABLE--
+
+
+DECLARE
+CURSOR tempRequestCursor IS
+Select 
+TempRequestID,
+BranchID, 
+Request_date,
+Start_date ,
+End_date ,
+Monday_AM ,
+Monday_PM ,
+Tuesday_AM ,
+Tuesday_PM ,
+Wednesday_AM ,
+Wednesday_PM ,
+Thursday_AM ,
+Thursday_PM  ,
+Friday_AM ,
+Friday_PM ,
+Saturday_AM ,
+Request_Status,
+Number_of_weeks, 
+Comments
+FROM TEMPREQUEST temp;
+BEGIN
+   FOR  t_rec IN tempRequestCursor
+   LOOP
+   if (t_rec.TempRequestID is not null) then 
+insert into DW_TEMPREQUEST_DIM  values(   
+t_rec.TempRequestID,
+t_rec.BranchID, 
+t_rec.Request_date,
+t_rec.Start_date ,
+t_rec.End_date ,
+t_rec.Monday_AM ,
+t_rec.Monday_PM ,
+t_rec.Tuesday_AM ,
+t_rec.Tuesday_PM ,
+t_rec.Wednesday_AM ,
+t_rec.Wednesday_PM ,
+t_rec.Thursday_AM ,
+t_rec.Thursday_PM ,
+t_rec.Friday_AM ,
+t_rec.Friday_AM ,
+t_rec.Saturday_AM ,
+t_rec.Request_Status,
+t_rec.Number_of_weeks, 
+t_rec.Comments);
+END IF ;
+END LOOP;
+END;
+
+
+--CURSOR FOR BRANCH--
+
+
+DECLARE
+CURSOR branch IS
+SELECT 
+BRANCHID,
+BRANCHNAME,
+ADDRESS_LINE_1,
+ADDRESS_LINE_2,
+TOWN,
+COUNTY,
+POSTCODE,
+LOCALITY,
+TELEPHONE#,
+FAX#,
+BYPASS#,
+APPROXIMATE_LIST_SIZE,
+TYPE_OF_COMPUTER_SYSTEM,
+COMPUTER_USED_IN_CONSULTATIONS,
+APPOINTMENT_SYSTEM,
+LEAFLETS,
+DATE_OF_LAST_UPDATE,
+TYPE_OF_BRANCH FROM BANKBRANCH;
+BEGIN
+   FOR  session_branch in branch
+   LOOP
+   if (session_branch.BRANCHID is not null) then 
+   insert into DW_BANKBRANCH_DIM  values (session_branch.BRANCHID, session_branch.BRANCHNAME,session_branch.ADDRESS_LINE_1, session_branch.ADDRESS_LINE_2, session_branch.TOWN,session_branch.COUNTY,session_branch.POSTCODE,
+   session_branch.LOCALITY,session_branch.TELEPHONE#, session_branch.FAX#, session_branch.BYPASS#, session_branch.APPROXIMATE_LIST_SIZE, session_branch.TYPE_OF_COMPUTER_SYSTEM, session_branch.COMPUTER_USED_IN_CONSULTATIONS, session_branch.APPOINTMENT_SYSTEM, session_branch.LEAFLETS, session_branch.DATE_OF_LAST_UPDATE, session_branch.TYPE_OF_BRANCH);
+   end if ;
+  
+   END LOOP;
+
+
+END;
+
+
+--CURSOR FOR FACT AND TIME_TABLE--
+DECLARE 
+date_id number:=0;
+CURSOR tempRequestCursor IS
+SELECT ses.sessionid sessionid, bank.branchid branchid, temp.temprequestid temprequestid, ses.SESSIONDATE sessiondate
+FROM   SESSION_ ses,BANKBRANCH bank ,TEMPREQUEST temp
+WHERE temp.BRANCHID=bank.BRANCHID
+AND   ses.REQUESTID=temp.TEMPREQUESTID ;
+BEGIN
+FOR  fact_rec in tempRequestCursor
+   LOOP
+date_id := date_id+1;
+   --inserting to TIME_TABLE
+insert into DW_TIME_DIM values(
+date_id, fact_rec.SESSIONDATE,
+EXTRACT(YEAR FROM fact_rec.SESSIONDATE),
+EXTRACT(MONTH FROM fact_rec.SESSIONDATE),
+EXTRACT(DAY FROM fact_rec.SESSIONDATE),
+to_char(to_date(fact_rec.SESSIONDATE),'w') );
+insert into DW_BRANCH_TEMP_FACT  (branchid,temprequestid,sessionid,date_id,session_date ) values(fact_rec.branchid , fact_rec.temprequestiD ,fact_rec.sessionid ,date_id,fact_rec.SESSIONDATE);
+END LOOP;
+
+END;
